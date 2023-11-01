@@ -20,16 +20,30 @@ rm(list = ls()) # emptying global environment
 #library(ggplot2) # test-plotting
 #library(stringr) # working with regex
 
-library(tidyverse)
-install.packages("janitor")
-library(janitor)
-install.packages("tidylog")
-library(tidylog)
+library(tidyverse) # instead of tidyr, strinr etc. (data manipulation)
+#install.packages("janitor")
+library(janitor) # clean up data (i.e. get rid of empty spaces)
+#install.packages("tidylog")
+library(tidylog) # how many lines of data deleted/ manipulated etc.
+library(dataDownloader)
 
 # task-specific packages (include short description of what it is used for)
 
 ### LOAD DATA SET ##############################################################
 
+# download data from OSF to computer
+get_file(node = "bg2mu",
+         file = "data_sa2.txt",
+         path = "data/ZAF",
+         remote_path = "focal_level/demographics/raw data/ZAF")
+
+get_file(node = "bg2mu",
+         file = "RangeX_Metadata_21_22_ZAF.csv",
+         path = "data/ZAF",
+         remote_path = "metadata")
+
+
+# import data into R studio
 # load demographic data
 dat_YS21 <- read_delim("data/ZAF/data_sa2.txt") %>%
   clean_names()
