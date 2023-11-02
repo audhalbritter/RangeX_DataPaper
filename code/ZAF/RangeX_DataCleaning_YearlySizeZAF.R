@@ -16,6 +16,11 @@ rm(list = ls()) # emptying global environment
 ### packages etc. ##############################################################
 
 library(tidyverse) # instead of tidyr, strinr etc. (data manipulation)
+#install.packages("janitor")
+library(janitor) # clean up data (i.e. get rid of empty spaces)
+#install.packages("tidylog")
+library(tidylog) # how many lines of data deleted/ manipulated etc.
+library(dataDownloader)
 
 # task-specific packages (include short description of what it is used for)
 
@@ -37,12 +42,26 @@ get_file(node = "bg2mu",
          path = "data/ZAF",
          remote_path = "metadata")
 
+get_file(node = "bg2mu",
+         file = "meta_21_22.csv",
+         path = "data/ZAF",
+         remote_path = "focal_level/demographics/raw data/ZAF")
+
 
 # import data into R studio
 # load demographic data
-dat_YS21_lo <- read_csv("data/ZAF/2021_2_data_lowSite.csv") %>%
+raw_dat_YS21_lo <- read_csv("data/ZAF/2021_2_data_lowSite.csv") %>%
   clean_names()
 
+raw_dat_YS21_hi <- read_csv("data/ZAF/2021_2_data_highSite.csv") %>%
+  clean_names()
+
+raw_meta <- read_csv("data/ZAF/meta_21_22.csv") %>%
+  clean_names()
+
+dat_YS21_lo <- raw_dat_YS21_lo
+dat_YS21_hi <- raw_dat_YS21_hi
+meta <- raw_meta
 
 # load treatment key
 key <- read_csv("data/ZAF/RangeX_Metadata_21_22_ZAF.csv") %>%
@@ -71,16 +90,52 @@ factor_cols <- c("herbivory")
 
 ### CLEAN COLUMN NAMES & DATA CLASSES ##########################################
 
-# check data classes
-str(dat_YS21_lo)
+integer_cols_org <- c("vh_nov_21", "vw_nov_21", "nlc_nov_21", "nb_nov_21", "lll_nov_21", "dia_nov_21", "vh_jan_22", "vw_jan_22", "nlc_jan_22", "nb_jan_22", "lll_jan_22", "dia_jan_22", "vh_mar_22", "vw_mar_22", "nlc_mar_22", "nb_mar_22", "lll_mar_22", "dia_mar_22", "vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_oct_22", "dia_oct_22")
 
-# change column names: get column names
-dput(colnames(dat_YS21_lo))
+# correct column naming typo
+colnames(dat_YS21_hi)[12] <- "lll_nov_21"
+colnames(dat_YS21_lo)[11] <- "lll_nov_21"
+
+# delete unnecessary columns, make plot id column identical in both low and high data frames, add site column
+dat_YS21_hi <- dat_YS21_hi %>%
+  dplyr::select(-treat_veg, -treat_otc, -id) %>%
+  mutate(plot = gsub("[[:upper:]]", "", plot),
+         plot = gsub("^\\.", "", plot),
+         across(all_of(integer_cols_org), as.numeric),
+         site = "hi")
+
+dat_YS21_lo <- dat_YS21_lo %>%
+  dplyr::select(-date, -treatment) %>%
+  mutate(plot = gsub("[[:upper:]]", "", plot),
+         plot = gsub("^\\.", "", plot),
+         across(all_of(integer_cols_org), as.numeric),
+         site = "lo")
+
+# merge high and low data sets
+dat_YS21 <- bind_rows(dat_YS21_hi, dat_YS21_lo)
+
+
+# make long format
+dat_YS21 <- dat_YS21 %>%
+  pivot_longer(
+    cols = !c(flunctional_group, species, plot,  position, site),
+    names_to = c("variable", "month", "year"),
+    names_sep = "_",
+    values_to = "value") %>%
+  pivot_wider(names_from = variable,
+              values_from = value)
+
+# make some manipulations to be able to merge key on
+dat_YS21 <- dat_YS21 %>%
+  mutate(region = "ZAF") %>%
+  separate_wider_delim(plot, delim = ".", names = c("block_id_original", "plot_id_original")) %>%
+  dplyr::select(-"month", -"year")
+
+
 
 # change them to new names
 dat_YS21 <- dat_YS21 %>%
-  rename("date" = "date_measurement",
-         "height_vegetative_str" = "vh",
+  rename("height_vegetative_str" = "vh",
          "number_leaves" = "nlc",
          "leaf_length1" = "lll",
          "vegetative_width" = "vw",
@@ -90,30 +145,11 @@ dat_YS21 <- dat_YS21 %>%
          "position_id_original" = "position")
 
 
-# delete unnecessyr columns
-dat_YS21 <- dat_YS21 %>%
-  dplyr::select(where(~!all(is.na(.x)))) %>%
-  mutate("collector" = "OG",
-         "survival" = ifelse(is.na(height_vegetative_str) == TRUE, 0, 1))
-  
 # get empty columns
 present_columns <- colnames(dat_YS21)
 missing_col <- setdiff(final_columns, present_columns)
 
 dat_YS21[, missing_col] <- NA
-
-# add columns for merging
-dat_YS21 <- dat_YS21 %>%
-  separate_wider_delim(plot, delim = ".", names = c("block_id_original", "plot_id_original")) %>%
-  mutate(region = "ZAF",
-         site = "hi") %>%
-  dplyr::select(-"treat_otc", -"treat_veg", -"species", -"unique_plant_id") %>%
-  filter(grepl("2022-03", year)) %>%
-  mutate(year = 2022)
-
-# change plot 9.3 to 9.4
-dat_YS21 <- dat_YS21 %>%
-  mutate(plot_id_original = ifelse(block_id_original == 9 & plot_id_original == 3 & site == "hi", 4, plot_id_original))
 
 
 ### ADD TREATMENTS ETC. ########################################################
@@ -156,7 +192,7 @@ dat_YS21_merged <- dat_YS21_merged[!c(dat_YS21_merged$block_id_original == 1 & d
 dat_YS21_merged <- dat_YS21_merged %>% # delete dublicated position 10 plot 1.2 row
   distinct() %>%
   tidylog::drop_na()
-  
+
 
 
 # check for NAs: filter all rows with NA's in vegetative height and number of leaves (they are probably dead --> can only be checked with 2023 survival check or phenology data)
@@ -166,7 +202,7 @@ dat_YS21_merged <- dat_YS21_merged %>% # delete dublicated position 10 plot 1.2 
 
 ### DELETE COLUMNS & CHANGE DATATYPES ##########################################
 
- 
+
 ## delete all columns not in final data frame plus rearrange in right order
 #dat_YS21 <- dat_YS21 %>% 
 #  dplyr::select(any_of(final_columns))
