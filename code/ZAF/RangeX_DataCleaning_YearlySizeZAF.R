@@ -16,11 +16,6 @@ rm(list = ls()) # emptying global environment
 ### packages etc. ##############################################################
 
 library(tidyverse) # instead of tidyr, strinr etc. (data manipulation)
-#install.packages("janitor")
-library(janitor) # clean up data (i.e. get rid of empty spaces)
-#install.packages("tidylog")
-library(tidylog) # how many lines of data deleted/ manipulated etc.
-library(dataDownloader)
 
 # task-specific packages (include short description of what it is used for)
 
