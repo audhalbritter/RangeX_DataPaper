@@ -4,7 +4,7 @@
 
 ################################################################################
 
-### Data used           : data_sa2.txt
+### Data used           : 2021_2_data.xls, RangeX_Metadata_21_22_ZAF.csv
 ### Date last modified  : 31.10.2023
 ### Purpose             : Transform the raw 2021 yearly size data set from ZAF into the data paper format.
 
@@ -15,13 +15,8 @@ rm(list = ls()) # emptying global environment
 
 ### packages etc. ##############################################################
 
-# basic packages
-#library(dplyr); library(tidyr) # data manipulation
-#library(ggplot2) # test-plotting
-#library(stringr) # working with regex
-
 library(tidyverse) # instead of tidyr, strinr etc. (data manipulation)
-install.packages("janitor")
+#install.packages("janitor")
 library(janitor) # clean up data (i.e. get rid of empty spaces)
 #install.packages("tidylog")
 library(tidylog) # how many lines of data deleted/ manipulated etc.
@@ -33,9 +28,14 @@ library(dataDownloader)
 
 # download data from OSF to computer
 get_file(node = "bg2mu",
-         file = "data_sa2.txt",
+         file = "2021_2_data_lowSite.csv",
          path = "data/ZAF",
-         remote_path = "focal_level/demographics/raw data/ZAF")
+         remote_path = "focal_level/demographics/raw data/ZAF") # high site 2021/22
+
+get_file(node = "bg2mu",
+         file = "2021_2_data_highSite.csv",
+         path = "data/ZAF",
+         remote_path = "focal_level/demographics/raw data/ZAF") # high site 2021/22
 
 get_file(node = "bg2mu",
          file = "RangeX_Metadata_21_22_ZAF.csv",
@@ -45,7 +45,7 @@ get_file(node = "bg2mu",
 
 # import data into R studio
 # load demographic data
-dat_YS21 <- read_delim("data/ZAF/data_sa2.txt") %>%
+dat_YS21_lo <- read_csv("data/ZAF/2021_2_data_lowSite.csv") %>%
   clean_names()
 
 
@@ -54,18 +54,16 @@ key <- read_csv("data/ZAF/RangeX_Metadata_21_22_ZAF.csv") %>%
   clean_names()
 
 # define useful vector
-#species_names <- c("Brachypodium pinnatum" = "brapin", "Bromus erectus" = "broere", "Daucus carota" = "daucar", "Hypericum perforatum" = "hypper",
-#                   "Medicago lupulina" = "medlup", "Plantago media" = "plamed", "Silene vulgaris" = "silvul", "Scabiosa columbaria" = "scacol",
-#                   "Centaurea jacea" = "cenjac", "Salvia pratensis" = "salpra")
 
 # wanted columns & data types
-final_columns <- c("unique_plant_id", "species", "functional_group", "year", "collector", "survival", "height_vegetative_str", "height_reproductive_str", "height_vegetative", "height_reproductive", "vegetative_width", "height_nathan",
+final_columns <- c("unique_plant_id", "species", "functional_group", "date_measurement", "date_planting", "collector", "survival", "height_vegetative_str", "height_reproductive_str", "height_vegetative", "height_reproductive", "vegetative_width", "height_nathan",
                    "stem_diameter", "leaf_length1", "leaf_length2", "leaf_length3", "leaf_width", "petiole_length", "number_leaves", "number_tillers", "number_branches", "number_flowers", 
                    "mean_inflorescence_size", "herbivory")
 
-integer_cols <- c("year", "height_vegetative_str", "height_reproductive_str", "height_vegetative", "height_reproductive", "vegetative_width", "height_nathan",
+integer_cols <- c("height_vegetative_str", "height_reproductive_str", "height_vegetative", "height_reproductive", "vegetative_width", "height_nathan",
                   "stem_diameter", "leaf_length1", "leaf_length2", "leaf_length3", "leaf_width", "petiole_length", "number_leaves", "number_tillers", "number_branches", "number_flowers", 
                   "mean_inflorescence_size")
+date_cols <- c("date_measurement", "date_planting")
 string_cols <- c("unique_plant_id", "species", "collector")
 factor_cols <- c("herbivory")
 
@@ -79,14 +77,14 @@ factor_cols <- c("herbivory")
 ### CLEAN COLUMN NAMES & DATA CLASSES ##########################################
 
 # check data classes
-str(dat_YS21)
+str(dat_YS21_lo)
 
 # change column names: get column names
-dput(colnames(dat_YS21))
+dput(colnames(dat_YS21_lo))
 
 # change them to new names
 dat_YS21 <- dat_YS21 %>%
-  rename("year" = "date",
+  rename("date" = "date_measurement",
          "height_vegetative_str" = "vh",
          "number_leaves" = "nlc",
          "leaf_length1" = "lll",
