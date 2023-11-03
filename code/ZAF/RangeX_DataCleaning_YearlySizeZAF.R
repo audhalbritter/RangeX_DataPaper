@@ -10,22 +10,20 @@
 
 ################################################################################
 
-rm(list = ls()) # emptying global environment
+#rm(list = ls()) # emptying global environment
 
 
 ### packages etc. ##############################################################
 
-# basic packages
-#library(dplyr); library(tidyr) # data manipulation
-#library(ggplot2) # test-plotting
-#library(stringr) # working with regex
+# load packages
 
 library(tidyverse) # instead of tidyr, strinr etc. (data manipulation)
-install.packages("janitor")
+#install.packages("janitor")
 library(janitor) # clean up data (i.e. get rid of empty spaces)
 #install.packages("tidylog")
 library(tidylog) # how many lines of data deleted/ manipulated etc.
 library(dataDownloader)
+library(readxl)
 
 # task-specific packages (include short description of what it is used for)
 
@@ -33,7 +31,12 @@ library(dataDownloader)
 
 # download data from OSF to computer
 get_file(node = "bg2mu",
-         file = "data_sa2.txt",
+         file = "2021_2_data.xls",
+         path = "data/ZAF",
+         remote_path = "focal_level/demographics/raw data/ZAF")
+
+get_file(node = "bg2mu",
+         file = "2023_data.xlsx",
          path = "data/ZAF",
          remote_path = "focal_level/demographics/raw data/ZAF")
 
@@ -44,8 +47,11 @@ get_file(node = "bg2mu",
 
 
 # import data into R studio
-# load demographic data
-dat_YS21 <- read_delim("data/ZAF/data_sa2.txt") %>%
+# read in demographic data
+dat_YS21_raw <- read_excel("data/ZAF/2021_2_data.xls") %>%
+  clean_names()
+
+dat_YS23 <- read_excel("data/ZAF/2023_data.xlsx") %>%
   clean_names()
 
 
@@ -63,45 +69,47 @@ final_columns <- c("unique_plant_id", "species", "functional_group", "year", "co
                    "stem_diameter", "leaf_length1", "leaf_length2", "leaf_length3", "leaf_width", "petiole_length", "number_leaves", "number_tillers", "number_branches", "number_flowers", 
                    "mean_inflorescence_size", "herbivory")
 
-integer_cols <- c("year", "height_vegetative_str", "height_reproductive_str", "height_vegetative", "height_reproductive", "vegetative_width", "height_nathan",
-                  "stem_diameter", "leaf_length1", "leaf_length2", "leaf_length3", "leaf_width", "petiole_length", "number_leaves", "number_tillers", "number_branches", "number_flowers", 
-                  "mean_inflorescence_size")
+integer_cols <- c("vh_nov_21", "vw_nov_21", "nlc_nov_21", "nb_nov_21", "lll_nov_2", "dia_nov_21", "vh_jan_22", "vw_jan_22", "nlc_jan_22", "nb_jan_22", "lll_jan_22", "dia_jan_22", "vh_mar_22", "vw_mar_22", "nlc_mar_22", "nb_mar_22", "lll_mar_22", "dia_mar_22", "vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_oct_22", "dia_oct_22")
 string_cols <- c("unique_plant_id", "species", "collector")
 factor_cols <- c("herbivory")
 
 
 
 ################################################################################
-### 2021 - upper site ##########################################################
+### 2021 ##########################################################
 ################################################################################
 
 
 ### CLEAN COLUMN NAMES & DATA CLASSES ##########################################
 
 # check data classes
-str(dat_YS21)
-
-# change column names: get column names
-dput(colnames(dat_YS21))
+str(dat_YS21_raw)
 
 # change them to new names
-dat_YS21 <- dat_YS21 %>%
-  rename("year" = "date",
+dat_YS21_raw |> 
+  mutate(across(all_of(integer_cols), as.integer)) |> 
+  # make new variable for survival
+  mutate(survival_nov_21 = if_else(is.na(vh_nov_21), 0, 1),
+         survival_jan_22 = if_else(is.na(vh_jan_22), 0, 1),
+         survival_mar_22 = if_else(is.na(vh_mar_22), 0, 1),
+         survival_oct_22 = if_else(is.na(vh_oct_22), 0, 1)) |> 
+  pivot_longer(
+    cols = !c(treat_veg, treat_otc, flunctional_group, species, plot,  position, id),
+    names_to = c("variable", "month", "year"),
+    names_sep = "_",
+    values_to = "value") |> 
+  pivot_wider(names_from = variable,
+              values_from = value) |> 
+  rename("functional_group" = "flunctional_group",
+         "position_id_original" = "position",
          "height_vegetative_str" = "vh",
          "number_leaves" = "nlc",
-         "leaf_length1" = "lll",
-         "vegetative_width" = "vw",
          "number_branches" = "nb",
-         "stem_diameter" = "dia",
-         "functional_group" = "flunctional_group",
-         "position_id_original" = "position")
+         "leaf_length1" = "lll",
+         "stem_diameter" = "dia") |> 
+  select(year, month, )
 
 
-# delete unnecessyr columns
-dat_YS21 <- dat_YS21 %>%
-  dplyr::select(where(~!all(is.na(.x)))) %>%
-  mutate("collector" = "OG",
-         "survival" = ifelse(is.na(height_vegetative_str) == TRUE, 0, 1))
   
 # get empty columns
 present_columns <- colnames(dat_YS21)
