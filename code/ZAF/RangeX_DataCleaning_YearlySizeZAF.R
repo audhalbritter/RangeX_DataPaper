@@ -70,7 +70,7 @@ key <- read_csv("data/ZAF/RangeX_Metadata_21_22_ZAF.csv") %>%
 # define useful vector
 
 # wanted columns & data types
-final_columns <- c("unique_plant_id", "species", "functional_group", "date_measurement", "date_planting", "collector", "survival", "height_vegetative_str", "height_reproductive_str", "height_vegetative", "height_reproductive", "vegetative_width", "height_nathan",
+final_columns <- c("functional_group", "date_measurement", "date_planting", "collector", "survival", "height_vegetative_str", "height_reproductive_str", "height_vegetative", "height_reproductive", "vegetative_width", "height_nathan",
                    "stem_diameter", "leaf_length1", "leaf_length2", "leaf_length3", "leaf_width", "petiole_length", "number_leaves", "number_tillers", "number_branches", "number_flowers", 
                    "mean_inflorescence_size", "herbivory")
 
@@ -78,7 +78,7 @@ integer_cols <- c("height_vegetative_str", "height_reproductive_str", "height_ve
                   "stem_diameter", "leaf_length1", "leaf_length2", "leaf_length3", "leaf_width", "petiole_length", "number_leaves", "number_tillers", "number_branches", "number_flowers", 
                   "mean_inflorescence_size")
 date_cols <- c("date_measurement", "date_planting")
-string_cols <- c("unique_plant_id", "species", "collector")
+string_cols <- c("collector")
 factor_cols <- c("herbivory")
 
 
@@ -129,7 +129,7 @@ dat_YS21 <- dat_YS21 %>%
 dat_YS21 <- dat_YS21 %>%
   mutate(region = "ZAF") %>%
   separate_wider_delim(plot, delim = ".", names = c("block_id_original", "plot_id_original")) %>%
-  dplyr::select(-"month", -"year")
+  dplyr::select(-"species") #-"month", -"year", 
 
 
 
@@ -156,7 +156,7 @@ dat_YS21[, missing_col] <- NA
 
 # prepare treatment key
 key <- key %>%
-  filter(region == "ZAF" & site == "hi") %>%
+  filter(region == "ZAF") %>%
   mutate(block_id_original = as.character(block_id_original),
          position_id_original = as.integer(position_id_original),
          plot_id_original = as.character(plot_id_original))
@@ -176,11 +176,8 @@ dat_YS21_na <- dat_YS21_merged %>%
   filter(is.na(unique_plant_id) | is.na(year) | is.na(species)) 
 
 
-# all data from plot 9.4 at high site are missing, but they are in key
-# all key entries from plot 9.3 at high site are missing
-# --> collected data is 9.3, key data is 9.4
-
-# solve that! but before merging
+# some problem in plot 10.1 lo
+a <- key[key$block_id_original == 10 & key$plot_id_original == 1 & key$site == "lo", ]
 
 # shrub in 1.3: must be a typo, no individuals missing in other block 1 plots
 dat_YS21_merged <- dat_YS21_merged[!c(dat_YS21_merged$block_id_original == 1 & dat_YS21_merged$plot_id_original == 3),]
