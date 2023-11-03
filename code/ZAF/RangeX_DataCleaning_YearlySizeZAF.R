@@ -179,22 +179,48 @@ dat_YS21_na <- dat_YS21_merged %>%
 # some problem in plot 10.1 lo
 a <- key[key$block_id_original == 10 & key$plot_id_original == 1 & key$site == "lo", ]
 
-# shrub in 1.3: must be a typo, no individuals missing in other block 1 plots
-dat_YS21_merged <- dat_YS21_merged[!c(dat_YS21_merged$block_id_original == 1 & dat_YS21_merged$plot_id_original == 3),]
-
-# position 10 and 11 are double in plot 1.2 at high site
-dat_YS21_merged <- dat_YS21_merged[!c(dat_YS21_merged$block_id_original == 1 & dat_YS21_merged$plot_id_original == 2 & 
-                                        dat_YS21_merged$position_id_original == 11 & dat_YS21_merged$leaf_length1 != 4.0),] # position 11: in one row one measurement is missing; delete other
-
-dat_YS21_merged <- dat_YS21_merged %>% # delete dublicated position 10 plot 1.2 row
-  distinct() %>%
-  tidylog::drop_na()
+# plot lo 10.1 position 1 is missing in the metadata file
 
 
 
-# check for NAs: filter all rows with NA's in vegetative height and number of leaves (they are probably dead --> can only be checked with 2023 survival check or phenology data)
-#dat_YS21_na <- dat_YS21 %>% 
-#  filter(is.na(height_vegetative_str) | is.na(number_leaves)) 
+# FOR NOW (should be corrected in metadata file itself) !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# take metadata from position 2 of ssma plot, update it (SPECIES IS MISSING!!)
+pl_lo10.1 <- key[key$site == "lo" & key$block_id_original == 10 & key$plot_id_original == 1 & key$position_id_original == 2,] %>%
+  mutate(position_id_original = 1,
+         unique_plant_id = "ZAF.lo.ambi.bare.wf.10.01",
+         position_id = "01",
+         species = "MISSING") 
+
+dat_YS21_merged[dat_YS21_merged$site == "lo" & dat_YS21_merged$block_id_original == 10 & 
+                  dat_YS21_merged$plot_id_original == 1, c(31:38)] <- pl_lo10.1[, c(6:13)]
+
+# DELETE UNTIL HERE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+# check whether there are any mistaken NA in metadata columns
+dat_YS21_na <- dat_YS21_merged %>% 
+  filter(is.na(unique_plant_id) | is.na(year) | is.na(species)) # ok now!
+
+
+### ADD  ##########################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ### DELETE COLUMNS & CHANGE DATATYPES ##########################################
