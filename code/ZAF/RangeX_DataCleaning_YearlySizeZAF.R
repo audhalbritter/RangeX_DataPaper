@@ -175,7 +175,7 @@ key_21 <- key %>%
   filter(planting_date == "2021-11-17")
 
 # merge treatments to 2021 size data frame
-dat_YS21_merged <- full_join(dat_YS21, key_21, by = c("region", "site", "block_id_original", "plot_id_original", "position_id_original"))
+dat_YS21_merged <- left_join(dat_YS21, key_21, by = c("region", "site", "block_id_original", "plot_id_original", "position_id_original"))
 
 
 ### MISSING ENTRIES/ VALUES/ NA's ##############################################
@@ -196,28 +196,49 @@ dat_YS23_hi <- raw_dat_YS23_hi
 
 ### CLEAN COLUMN NAMES & DATA CLASSES ##########################################
 
-integer_cols_org <- c("vh_nov_22", "vw_nov_22", "nlc_nov_22", "nb_nov_22", "lll_nov_22", "dia_nov_22", "vh_jan_23", "vw_jan_23", "nlc_jan_23", "nb_jan_23", "lll_jan_23", "dia_jan_23", "vh_mar_23", "vw_mar_23", "nlc_mar_23", "nb_mar_23", "lll_mar_23", "dia_mar_23", "vh_oct_23", "vw_oct_23", "nlc_oct_23", "nb_oct_23", "lll_oct_23", "dia_oct_23")
+integer_cols_hi <- c("vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_oct_22", "dia_oct_22", "vh_nov_22",
+                     "vw_nov_22",  "nlc_nov_22", "nb_nov_22", "lll_nov_22", "dia_nov_22", "vh_feb_23", "vw_feb_23",
+                     "nlc_feb_23", "nb_feb_23", "lll_feb_23", "dia_feb_23", "vh_march_23", "vw_march_23", "nlc_march_23", 
+                     "nb_march_23", "lll_march_23", "dia_march_23")
 
+integer_cols_lo <- c("vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_oct_22", "dia_oct_22", "vh_nov_22",
+                     "vw_nov_22", "nlc_nov_22", "nb_nov_22", "lll_nov_22", "dia_nov_22", "vh_feb_23", "vw_feb_22",        
+                     "nlc_feb_23", "nb_feb_23", "lll_feb_23", "dia_feb_23", "vh_march_23", "vw_march_23", "nlc_march_23",
+                     "nb_march_23", "lll_march_23", "dia_march_23" )
+  
 # delete unnecessary columns, make plot id column identical in both low and high data frames, add site column
 dat_YS23_hi <- dat_YS23_hi %>%
-  dplyr::select(-treat_veg, -treat_otc, -id, -species, -position, -block, -plot_2) %>%
-  mutate(site = "hi")
+  dplyr::select(-treat_veg, -treat_otc, -id, -species, -block, -plot_2) %>%
+  separate_wider_delim(plot, delim = ".", names = c("block_id_original", "plot_id_original")) %>%
+  rename("position_id_original" = "position") %>%
+  mutate(site = "hi",
+         across(all_of(integer_cols_hi), as.numeric),
+         across(all_of(c("block_id_original", "plot_id_original", "position_id_original")), as.character)) 
 
-dat_YS21_lo <- dat_YS21_lo %>%
-  dplyr::select(-date, -treatment) %>%
-  mutate(plot = gsub("[[:upper:]]", "", plot),
-         plot = gsub("^\\.", "", plot),
-         across(all_of(integer_cols_org), as.numeric),
-         site = "lo")
+dat_YS23_lo <- dat_YS23_lo %>%
+  dplyr::select(-date, -treatment, -x2, -species) %>%
+  separate_wider_delim(id, delim = ".", names = c("region", "block_id_original", "plot_id_original", "position_id_original")) %>%
+  mutate(across(all_of(integer_cols_lo), as.numeric),
+         across(all_of(c("block_id_original", "plot_id_original", "position_id_original")), as.character)) 
+
+
+
+### check warning: "mutate: converted 'vw_oct_22' from character to double (2 new NA) 
+### converted 'vw_march_23' from character to double (1 new NA)
+
+
+
+
+
+
 
 # merge high and low data sets
-dat_YS21 <- bind_rows(dat_YS21_hi, dat_YS21_lo)
-
+dat_YS23 <- bind_rows(dat_YS23_hi, dat_YS23_lo)
 
 # make long format
-dat_YS21 <- dat_YS21 %>%
+dat_YS23 <- dat_YS23 %>%
   pivot_longer(
-    cols = !c(flunctional_group, species, plot,  position, site),
+    cols = !c(flunctional_group, plot,  position, site),
     names_to = c("variable", "month", "year"),
     names_sep = "_",
     values_to = "value") %>%
