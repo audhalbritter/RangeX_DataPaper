@@ -42,11 +42,6 @@ get_file(node = "bg2mu",
          path = "data/ZAF",
          remote_path = "metadata")
 
-get_file(node = "bg2mu",
-         file = "meta_21_22.csv",
-         path = "data/ZAF",
-         remote_path = "focal_level/demographics/raw data/ZAF")
-
 
 # import data into R studio
 # load demographic data
