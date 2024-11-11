@@ -15,7 +15,7 @@ rm(list = ls()) # emptying global environment
 
 ### packages etc. ##############################################################
 
-library(tidyverse) # instead of tidyr, strinr etc. (data manipulation)
+library(tidyverse) # instead of tidyr, stringr etc. (data manipulation)
 library(janitor) # clean up data (i.e. get rid of empty spaces)
 library(tidylog) # how many lines of data deleted/ manipulated etc.
 library(dataDownloader)
@@ -108,6 +108,9 @@ meta_ZAF21_na <- meta_ZAF21 %>%
 meta_ZAF21_22 <- bind_rows(meta_ZAF21, meta_ZAF22)
 
 # done!
+
+# save
+write_csv(meta_ZAF21_22, "data/ZAF/RangeX_Metadata_ZAF_clean.csv")
 
 ################################################################################
 ### Switzerland (CHE) ##########################################################
