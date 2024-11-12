@@ -10,7 +10,7 @@
 
 ################################################################################
 
-rm(list = ls()) # emptying global environment
+#rm(list = ls()) # emptying global environment
 
 
 ### packages etc. ##############################################################
@@ -136,8 +136,8 @@ dat_YS21 <- dat_YS21 %>%
 # make some manipulations to be able to merge key on
 dat_YS21 <- dat_YS21 %>%
   mutate(region = "ZAF") %>%
-  separate_wider_delim(plot, delim = ".", names = c("block_id_original", "plot_id_original")) %>%
-  dplyr::select(-"species") #-"month", -"year", 
+  separate_wider_delim(plot, delim = ".", names = c("block_id_original", "plot_id_original")) #%>%
+  #dplyr::select(-"species") #-"month", -"year", 
 
 
 
@@ -175,7 +175,8 @@ key_21 <- key %>%
   filter(planting_date == "2021-11-17")
 
 # merge treatments to 2021 size data frame
-dat_YS21_merged <- left_join(dat_YS21, key_21, by = c("region", "site", "block_id_original", "plot_id_original", "position_id_original"))
+dat_YS21_merged <- left_join(dat_YS21 |> 
+                               rename("sp" = species), key_21, by = c("region", "site", "block_id_original", "plot_id_original", "position_id_original"))
 
 
 ### MISSING ENTRIES/ VALUES/ NA's ##############################################
@@ -208,27 +209,24 @@ integer_cols_lo <- c("vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_o
   
 # delete unnecessary columns, make plot id column identical in both low and high data frames, add site column
 dat_YS23_hi <- dat_YS23_hi %>%
-  dplyr::select(-treat_veg, -treat_otc, -id, -species, -block, -plot_2) %>%
-  separate_wider_delim(plot, delim = ".", names = c("block_id_original", "plot_id_original")) %>%
-  rename("position_id_original" = "position") %>%
+  dplyr::select(-treat_veg, -treat_otc, -id, -block, -plot_2) %>%
+  separate_wider_delim(plot, delim = ".", names = c("block_id", "plot_id")) %>%
   mutate(site = "hi",
          across(all_of(integer_cols_hi), as.numeric),
-         across(all_of(c("block_id_original", "plot_id_original", "position_id_original")), as.character)) 
+         across(all_of(c("block_id", "plot_id", "position")), as.character)) |> 
+  rename("position_id" = position)
 
 dat_YS23_lo <- dat_YS23_lo %>%
-  dplyr::select(-date, -treatment, -x2, -species) %>%
-  separate_wider_delim(id, delim = ".", names = c("region", "block_id_original", "plot_id_original", "position_id_original")) %>%
-  mutate(across(all_of(integer_cols_lo), as.numeric),
-         across(all_of(c("block_id_original", "plot_id_original", "position_id_original")), as.character)) 
+  dplyr::select(-date, -treatment, -x2) %>%
+  separate_wider_delim(id, delim = ".", names = c("region", "block_id", "plot_id", "position_id")) %>%
+  mutate(site = "lo",
+         across(all_of(integer_cols_lo), as.numeric),
+         across(all_of(c("block_id", "plot_id", "position_id")), as.character)) 
 
 
 
 ### check warning: "mutate: converted 'vw_oct_22' from character to double (2 new NA) 
 ### converted 'vw_march_23' from character to double (1 new NA)
-
-
-
-
 
 
 
@@ -238,69 +236,83 @@ dat_YS23 <- bind_rows(dat_YS23_hi, dat_YS23_lo)
 # make long format
 dat_YS23 <- dat_YS23 %>%
   pivot_longer(
-    cols = !c(flunctional_group, plot,  position, site),
+    cols = !c(flunctional_group, region, species, block_id, plot_id, position_id, site),
     names_to = c("variable", "month", "year"),
     names_sep = "_",
     values_to = "value") %>%
   pivot_wider(names_from = variable,
               values_from = value)
 
+
 # make some manipulations to be able to merge key on
-dat_YS21 <- dat_YS21 %>%
-  mutate(region = "ZAF") %>%
-  separate_wider_delim(plot, delim = ".", names = c("block_id_original", "plot_id_original")) %>%
-  dplyr::select(-"species") #-"month", -"year", 
+dat_YS23 <- dat_YS23 %>%
+  mutate(region = "ZAF") #%>%
+  #dplyr::select(-"species") #-"month", -"year", 
 
 
 
 # change them to new names
-dat_YS21 <- dat_YS21 %>%
+dat_YS23 <- dat_YS23 %>%
   rename("height_vegetative_str" = "vh",
          "number_leaves" = "nlc",
          "leaf_length1" = "lll",
          "vegetative_width" = "vw",
          "number_branches" = "nb",
          "stem_diameter" = "dia",
-         "functional_group" = "flunctional_group",
-         "position_id_original" = "position")
+         "functional_group" = "flunctional_group")
 
 
 # get empty columns
-present_columns <- colnames(dat_YS21)
+present_columns <- colnames(dat_YS23)
 missing_col <- setdiff(final_columns, present_columns)
 
-dat_YS21[, missing_col] <- NA
+dat_YS23[, missing_col] <- NA
 
 
 ### ADD TREATMENTS ETC. ########################################################
 
 # prepare treatment key
-key <- key %>%
-  filter(region == "ZAF") %>%
-  mutate(block_id_original = as.character(block_id_original),
-         position_id_original = as.integer(position_id_original),
-         plot_id_original = as.character(plot_id_original),
-         plant_id_original = as.character(plant_id_original))
+key23 <- key %>%
+  filter(region == "ZAF") %>% 
+  rename("plot_id" = plot_id_original) |> 
+  mutate(block_id = as.character(block_id),
+         position_id = as.character(position_id),
+         plot_id = as.character(plot_id),
+         plant_id_original = as.character(plant_id_original)) |> 
+  # grab plant replacement, group by unique position id and filter for largest number, which is the plant that was replaced
+  mutate(ind_nr = stringr::str_extract(unique_plant_id, stringr::regex("(\\d+)(?!.*\\d)"))) |> 
+  group_by(unique_position_id, region, site, block_id, plot_id, position_id, species) |> 
+  tidylog::summarise(ind_nr = max(ind_nr)) |> 
+  mutate(unique_plant_id = paste0(unique_position_id, ".", ind_nr))
 
 # filter out 2021/ 22 metadata (there will be merging problems otherwise)
-key_21 <- key %>%
-  filter(planting_date == "2021-11-17")
+# key_21 <- key %>%
+#   filter(planting_date == "2021-11-17")
 
 # merge treatments to 2021 size data frame
-dat_YS21_merged <- full_join(dat_YS21, key_21, by = c("region", "site", "block_id_original", "plot_id_original", "position_id_original"))
+dat_YS23_merged <- tidylog::left_join(dat_YS23 |> 
+                     rename("sp" = species), key23, by = c("region", "site", "block_id", "plot_id", "position_id"))
+
+# anti_join
+# if data is not joining, use anti_join to find the rows that are not joining.
+# tidylog::anti_join(dat_YS23 |> 
+#                      rename("sp" = species), key23, by = c("region", "site", "block_id", "plot_id", "position_id")) 
+
+dat_YS23_merged |> count(species, sp) |> arrange(species) |> print(n = Inf)
+dat_YS21_merged |> count(species, sp) |> arrange(species) |> print(n = Inf)
 
 
 ### MISSING ENTRIES/ VALUES/ NA's ##############################################
 
 # check whether there are any mistaken NA in metadata columns
-dat_YS21_na <- dat_YS21_merged %>% 
+dat_YS23_na <- dat_YS23_merged %>% 
   filter(is.na(unique_plant_id) | is.na(year) | is.na(species)) 
 
 # nothing! clean for now
 
 
-
-
+# aloemac -> alomac
+# leucser -> leuser
 
 
 
