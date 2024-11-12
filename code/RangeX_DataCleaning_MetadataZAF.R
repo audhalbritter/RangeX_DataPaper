@@ -10,7 +10,7 @@
 
 ################################################################################
 
-rm(list = ls()) # emptying global environment
+#rm(list = ls()) # emptying global environment
 
 
 ### packages etc. ##############################################################
@@ -104,8 +104,12 @@ meta_ZAF21_na <- meta_ZAF21 %>%
 
 # none, amazing!
 
-# add rows & delete all dublicates
-meta_ZAF21_22 <- bind_rows(meta_ZAF21, meta_ZAF22)
+# bind 21 and 22
+meta_ZAF21_22 <- bind_rows(meta_ZAF21, meta_ZAF22) |> 
+  mutate(species = case_when(species == "aloemac" ~ "alomac",
+                             species == "leucser" ~ "leuser",
+                             species == "zervis" ~ "xervis",
+                             .default = species))
 
 # done!
 
