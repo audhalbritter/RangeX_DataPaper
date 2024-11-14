@@ -14,6 +14,9 @@
 
 #data (excludes everything in the folder data)
 data/*
+*.csv
+*.xsl
+*.xslx
 
 # you can make exceptions for specific files
 #!data/dragon_taxonomy.csv
