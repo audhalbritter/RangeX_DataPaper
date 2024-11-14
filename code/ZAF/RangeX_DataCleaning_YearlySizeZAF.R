@@ -47,30 +47,58 @@ get_file(node = "bg2mu",
          path = "data/ZAF",
          remote_path = "focal_level/demographics/raw data/ZAF") # high site 2022/23
 
+# get_file(node = "bg2mu",
+#          file = "RangeX_Metadata_ZAF_clean.csv",
+#          path = "data/ZAF",
+#          remote_path = "metadata")
+
 get_file(node = "bg2mu",
-         file = "RangeX_Metadata_ZAF_clean.csv",
+         file = "RangeX_Metadata_ZAF_22_23_final.csv",
          path = "data/ZAF",
          remote_path = "metadata")
 
 
+
+
 # import data into R studio
 # load demographic data
-raw_dat_YS21_lo <- read_csv("data/ZAF/2021_2_data_lowSite.csv") %>%
+# raw_dat_YS21_lo <- read_csv("data/ZAF/2021_2_data_lowSite.csv") %>%
+#   clean_names()
+# 
+# raw_dat_YS21_hi <- read_csv("data/ZAF/2021_2_data_highSite.csv") %>%
+#   clean_names()
+
+raw_dat_YS21_lo <- read_delim("data/ZAFdata_24/2021_2_data_lowSite_ZAF.csv") %>%
   clean_names()
 
-raw_dat_YS21_hi <- read_csv("data/ZAF/2021_2_data_highSite.csv") %>%
+raw_dat_YS21_hi <- read_delim("data/ZAFdata_24/2021_2_data_highSite_ZAF.csv") %>%
   clean_names()
 
-raw_dat_YS23_lo <- read_csv("data/ZAF/2023_data_lowSite.csv") %>%
+# raw_dat_YS23_lo <- read_csv("data/ZAF/2023_data_lowSite.csv") %>%
+#   clean_names()
+# 
+# raw_dat_YS23_hi <- read_csv("data/ZAF/2023_data_highSite.csv") %>%
+#   clean_names()
+
+raw_dat_YS23_lo <- read_csv("data/ZAFdata_24/2023_lower1_ZAF.csv") %>%
   clean_names()
 
-raw_dat_YS23_hi <- read_csv("data/ZAF/2023_data_highSite.csv") %>%
+raw_dat_YS23_hi <- read_csv("data/ZAFdata_24/2023_upper1_ZAF.csv") %>%
   clean_names()
 
 
 
 # load treatment key
-key <- read_csv("data/ZAF/RangeX_Metadata_ZAF_clean.csv") %>%
+# key21 <- read_csv("data/ZAF/RangeX_Metadata_ZAF_clean.csv") %>%
+#   clean_names()
+# 
+# key23 <- read_csv("data/ZAF/RangeX_Metadata_ZAF_22_23_final_3.csv") %>%
+#   clean_names()
+
+key21 <- read_delim("data/ZAFdata_24/RangeX_Metadata_21_22_ZAF.csv") %>%
+  clean_names()
+
+key23 <- read_delim("data/ZAFdata_24/RangeX_Metadata_ZAF_22_23_final1.csv") %>%
   clean_names()
 
 # define useful vector
@@ -98,25 +126,25 @@ dat_YS21_hi <- raw_dat_YS21_hi
 
 ### CLEAN COLUMN NAMES & DATA CLASSES ##########################################
 
-integer_cols_org <- c("vh_nov_21", "vw_nov_21", "nlc_nov_21", "nb_nov_21", "lll_nov_21", "dia_nov_21", "vh_jan_22", "vw_jan_22", "nlc_jan_22", "nb_jan_22", "lll_jan_22", "dia_jan_22", "vh_mar_22", "vw_mar_22", "nlc_mar_22", "nb_mar_22", "lll_mar_22", "dia_mar_22", "vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_oct_22", "dia_oct_22")
+# integer_cols_org <- c("vh_nov_21", "vw_nov_21", "nlc_nov_21", "nb_nov_21", "lll_nov_21", "dia_nov_21", "vh_jan_22", "vw_jan_22", "nlc_jan_22", "nb_jan_22", "lll_jan_22", "dia_jan_22", "vh_mar_22", "vw_mar_22", "nlc_mar_22", "nb_mar_22", "lll_mar_22", "dia_mar_22", "vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_oct_22", "dia_oct_22")
 
 # correct column naming typo
-colnames(dat_YS21_hi)[12] <- "lll_nov_21"
-colnames(dat_YS21_lo)[11] <- "lll_nov_21"
+# colnames(dat_YS21_hi)[12] <- "lll_nov_21"
+# colnames(dat_YS21_lo)[11] <- "lll_nov_21"
 
 # delete unnecessary columns, make plot id column identical in both low and high data frames, add site column
 dat_YS21_hi <- dat_YS21_hi %>%
   dplyr::select(-treat_veg, -treat_otc, -id) %>%
   mutate(plot = gsub("[[:upper:]]", "", plot),
          plot = gsub("^\\.", "", plot),
-         across(all_of(integer_cols_org), as.numeric),
+         across(matches("^(vh|nlc|lll|vw|nb|dia)"), as.numeric),
          site = "hi")
 
 dat_YS21_lo <- dat_YS21_lo %>%
   dplyr::select(-date, -treatment) %>%
   mutate(plot = gsub("[[:upper:]]", "", plot),
          plot = gsub("^\\.", "", plot),
-         across(all_of(integer_cols_org), as.numeric),
+         across(matches("^(vh|nlc|lll|vw|nb|dia)"), as.numeric),
          site = "lo")
 
 # merge high and low data sets
@@ -129,7 +157,7 @@ dat_YS21 <- dat_YS21 %>%
     cols = !c(flunctional_group, species, plot,  position, site),
     names_to = c("variable", "month", "year"),
     names_sep = "_",
-    values_to = "value") %>%
+    values_to = "value") %>% 
   pivot_wider(names_from = variable,
               values_from = value)
 
@@ -163,9 +191,10 @@ dat_YS21[, missing_col] <- NA
 ### ADD TREATMENTS ETC. ########################################################
 
 # prepare treatment key
-key <- key %>%
+key <- key21 %>%
   filter(region == "ZAF") %>%
-  mutate(block_id_original = as.character(block_id_original),
+  mutate(plot_id_original = paste(),
+         block_id_original = as.character(block_id_original),
          position_id_original = as.integer(position_id_original),
          plot_id_original = as.character(plot_id_original),
          plant_id_original = as.character(plant_id_original))
@@ -197,31 +226,36 @@ dat_YS23_hi <- raw_dat_YS23_hi
 
 ### CLEAN COLUMN NAMES & DATA CLASSES ##########################################
 
-integer_cols_hi <- c("vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_oct_22", "dia_oct_22", "vh_nov_22",
-                     "vw_nov_22",  "nlc_nov_22", "nb_nov_22", "lll_nov_22", "dia_nov_22", "vh_feb_23", "vw_feb_23",
-                     "nlc_feb_23", "nb_feb_23", "lll_feb_23", "dia_feb_23", "vh_march_23", "vw_march_23", "nlc_march_23", 
-                     "nb_march_23", "lll_march_23", "dia_march_23")
-
-integer_cols_lo <- c("vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_oct_22", "dia_oct_22", "vh_nov_22",
-                     "vw_nov_22", "nlc_nov_22", "nb_nov_22", "lll_nov_22", "dia_nov_22", "vh_feb_23", "vw_feb_22",        
-                     "nlc_feb_23", "nb_feb_23", "lll_feb_23", "dia_feb_23", "vh_march_23", "vw_march_23", "nlc_march_23",
-                     "nb_march_23", "lll_march_23", "dia_march_23" )
+# integer_cols_hi <- c("vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_oct_22", "dia_oct_22", "vh_nov_22",
+#                      "vw_nov_22",  "nlc_nov_22", "nb_nov_22", "lll_nov_22", "dia_nov_22", "vh_feb_23", "vw_feb_23",
+#                      "nlc_feb_23", "nb_feb_23", "lll_feb_23", "dia_feb_23", "vh_march_23", "vw_march_23", "nlc_march_23", 
+#                      "nb_march_23", "lll_march_23", "dia_march_23")
+# 
+# integer_cols_lo <- c("vh_oct_22", "vw_oct_22", "nlc_oct_22", "nb_oct_22", "lll_oct_22", "dia_oct_22", "vh_nov_22",
+#                      "vw_nov_22", "nlc_nov_22", "nb_nov_22", "lll_nov_22", "dia_nov_22", "vh_feb_23", "vw_feb_22",        
+#                      "nlc_feb_23", "nb_feb_23", "lll_feb_23", "dia_feb_23", "vh_march_23", "vw_march_23", "nlc_march_23",
+#                      "nb_march_23", "lll_march_23", "dia_march_23" )
   
 # delete unnecessary columns, make plot id column identical in both low and high data frames, add site column
 dat_YS23_hi <- dat_YS23_hi %>%
-  dplyr::select(-treat_veg, -treat_otc, -id, -block, -plot_2) %>%
+  #dplyr::select(-treat_veg, -treat_otc, -date, -id, -block, -plot_2) %>%
+  dplyr::select(-treat_veg, -treat_otc, -x85) %>%
   separate_wider_delim(plot, delim = ".", names = c("block_id", "plot_id")) %>%
   mutate(site = "hi",
-         across(all_of(integer_cols_hi), as.numeric),
-         across(all_of(c("block_id", "plot_id", "position")), as.character)) |> 
-  rename("position_id" = position)
+         #across(all_of(integer_cols_hi), as.numeric),
+         across(all_of(c("block_id", "plot_id", "position")), as.character)) |>
+  mutate(across(matches("^(vh|ncl|lll|vw|nb|dia)"), as.numeric)) |> 
+  rename("position_id" = position,
+         "functional_group" = flunctional_group)
 
-dat_YS23_lo <- dat_YS23_lo %>%
-  dplyr::select(-date, -treatment, -x2) %>%
-  separate_wider_delim(id, delim = ".", names = c("region", "block_id", "plot_id", "position_id")) %>%
+dat_YS23_lo <- dat_YS23_lo %>% 
+  #dplyr::select(-date, -treatment, -x2) %>%
+  dplyr::select(-x3, -treatment, -x6) %>% 
+  separate_wider_delim(plot, delim = ".", names = c("region", "block_id", "plot_id", "position_id")) %>%
   mutate(site = "lo",
-         across(all_of(integer_cols_lo), as.numeric),
-         across(all_of(c("block_id", "plot_id", "position_id")), as.character)) 
+         #across(all_of(integer_cols_lo), as.numeric),
+         across(all_of(c("block_id", "plot_id", "position_id")), as.character)) |> 
+  mutate(across(matches("^(vh|ncl|lll|vw|nb|dia)"), as.numeric))
 
 
 
@@ -236,7 +270,7 @@ dat_YS23 <- bind_rows(dat_YS23_hi, dat_YS23_lo)
 # make long format
 dat_YS23 <- dat_YS23 %>%
   pivot_longer(
-    cols = !c(flunctional_group, region, species, block_id, plot_id, position_id, site),
+    cols = !c(functional_group, region, species, block_id, plot_id, position_id, site),
     names_to = c("variable", "month", "year"),
     names_sep = "_",
     values_to = "value") %>%
@@ -258,8 +292,7 @@ dat_YS23 <- dat_YS23 %>%
          "leaf_length1" = "lll",
          "vegetative_width" = "vw",
          "number_branches" = "nb",
-         "stem_diameter" = "dia",
-         "functional_group" = "flunctional_group")
+         "stem_diameter" = "dia")
 
 
 # get empty columns
@@ -273,7 +306,6 @@ dat_YS23[, missing_col] <- NA
 
 # prepare treatment key
 key23 <- key %>%
-  filter(region == "ZAF") %>% 
   rename("plot_id" = plot_id_original) |> 
   mutate(block_id = as.character(block_id),
          position_id = as.character(position_id),
@@ -293,6 +325,17 @@ key23 <- key %>%
 dat_YS23_merged <- tidylog::left_join(dat_YS23 |> 
                      rename("sp" = species), key23, by = c("region", "site", "block_id", "plot_id", "position_id"))
 
+
+dat_YS23_merged |> 
+  #count(species, sp) |> 
+  mutate(sp = tolower(sp),
+         species3 = substr(species, 1, 3),
+         sp3 = substr(sp, 1, 3)) |> 
+  filter(species3 != sp3) |> 
+  select(functional_group, sp, species, everything()) %>%
+  write_csv(., "check_metadata.csv")
+
+
 # anti_join
 # if data is not joining, use anti_join to find the rows that are not joining.
 # tidylog::anti_join(dat_YS23 |> 
@@ -300,7 +343,26 @@ dat_YS23_merged <- tidylog::left_join(dat_YS23 |>
 
 dat_YS23_merged |> count(species, sp) |> arrange(species) |> print(n = Inf)
 dat_YS21_merged |> count(species, sp) |> arrange(species) |> print(n = Inf)
+dat23 <- dat_YS23_merged |> 
+  select(functional_group, sp, species, everything())
+write_csv(dat23, file = "dat_YS23_merged.csv")
 
+dat_YS21_merged |> 
+  count(species, sp) |> 
+  mutate(sp = tolower(sp),
+         species3 = substr(species, 1, 3),
+         sp3 = substr(sp, 1, 3)) |> 
+  filter(species3 == sp3) |> print(n = Inf)
+  select(functional_group, sp, species, everything()) %>%
+  write_csv(., "check_metadata_2021.csv")
+
+
+dat_YS21_merged |>
+  filter((species == "eracap" & sp == "Eragrostis curvula")) %>% 
+  write_csv(., "check_eracap.csv")
+
+#eracap  eragrostis curvula
+#budsal  buddleja loricata
 
 ### MISSING ENTRIES/ VALUES/ NA's ##############################################
 
