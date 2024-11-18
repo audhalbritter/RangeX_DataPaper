@@ -20,7 +20,7 @@ meta <- read_csv("data/ZAF/RangeX_PlotMetadata_ZAF_clean.csv") |>
   mutate(block_id = as.character(block_id),
          plot_id = as.character(plot_id))
 
-comm_low <- comm_raw |> 
+comm_low <- comm_raw_low |> 
   # remove rows after 34, because they do not contain data
   slice(1:34) |>
   rename("species" = plot_id) |> 
@@ -114,13 +114,16 @@ community <- bind_rows(comm_low, comm_high, graminoid_feb, graminoid_nov) |>
   select(year, month, region, site, block_id, plot_id, treat_warming, treat_competition, added_focals, unique_plot_id, group, species, cover, remark)
 
 write_csv(x = community, file = "RangeX_ZAR_clean_community_2022-2023.csv")
+range(community$cover)
 
-community |> 
-  filter(group == "focal") |> 
-  distinct(site, species) |> 
-  mutate(precense = 1) |> 
-  pivot_wider(names_from = site, values_from = precense)  |> 
-  arrange(species)  %>%
-  write_csv(., "focals.csv")
+
+# data checking
+# community |> 
+#   filter(group == "focal") |> 
+#   distinct(site, species) |> 
+#   mutate(precense = 1) |> 
+#   pivot_wider(names_from = site, values_from = precense)  |> 
+#   arrange(species)  %>% print(n = Inf)
+#   write_csv(., "focals.csv")
 
 
